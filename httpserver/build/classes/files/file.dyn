@@ -1,0 +1,12 @@
+<!DOCTYPE HTML">
+<html>
+    <head>  
+        <title>/ghbertuzzoServer</title> 
+    </head> 
+    <body>
+        <h1>/ghbertuzzo Server</h1>
+        <?php
+            date("dd/MM/yyyy");
+        ?>
+    </body>
+</html>

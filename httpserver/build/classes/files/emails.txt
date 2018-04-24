@@ -1,0 +1,89 @@
+Vimos que é importante diferenciar os requestCookies dos responseCookies. Em outras palavras, e leia bem rápido o texto a seguir:
+
+    Nem todo cookie que vem, é um cookie que vai!
+
+Implementamos uma nova funcionalidade em nosso HttpServer: quando o resourcePath referenciar um diretório, o servidor deverá responder com uma página em HTML que lista o conteúdo do diretório.
+
+Um exemplo prático desta funcionalidade pode ser observado neste site:
+
+http://fisica.ufpr.br/kurumin/
+
+Inicialmente, o código fonte da página HTML pode ser escrito diretamente em String no código.
+
+PARA CASA:
+
+    Implementar sua funcionalidade "ListDir"
+        PLUS: Ao clicar no label da coluna, exibir o resultado ordenado.
+
+
+Vimos que o HTTP especifica um mecanismos simples de controle de acesso.
+
+No site https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication são mostrados todos os detalhes sobre este processo.
+
+Observer que a especificação técnica estão descritas na RFC7235. E também é importante que o base64 é utilizado aqui somente para segurante sintática do protocolo e não para proteção do login e senha. Isto deverá ser feito pelo HTTPS.
+
+Vale lembrar que muitos servidores como Locaweb e GoDaddy usam o HttpServer Apache e é útil saber como lidar com os arquivos .htaccess e .htpasswd.
+
+No projeto da disciplina o controle de acesso deverá somente verificar se o usuário e a senha são iguais a "admin". Claro que você pode usar outros mecanismos para manter as credenciais de seu servidor.
+
+PARA CASA:
+
+    Implementar a funcionalidade de BasicAuthentication no seu servidor.
+        Login admin com senha admin
+    PLUS: Ao digitar http://meuhost:80/home/lucio o servidor responde com ListDir, mas todos os links ficam com "current dir" igual a "/home" e o navegador entende que lucio é um recurso. Se o usuário digitar http://meuhost:80/home/lucio/ isto não acontece! 
+        Se você observar o Networking do navegador verá ao submeter resourcePath sem a última barra, o servidor responde com 301.
+
+Vimos novamente que o protocolo HTTP é stateless, ou seja, cada requisição é completamente independente das demais e é tratada de forma atômica. O HTTP não possui uma máquina de estado, ou seja, não tem uma comunicação inicial, mediana e final.
+
+Contudo, ele provê um mecanismo que permite identificar o cliente e acompanhar, de certa forma, o estado do cliente. Este mecanismo é chamado de Cookie! Todas suas especificações estão definidas na RFC6265.
+
+Basicamente o cookie é gerado pelo servidor, enviado para o cliente no header da resposta no campo "Set-Cookie:". O cliente salva o par chave-valor e para todas as demais requisições ao mesmo site, o cliente adiciona um campo no header "Cookie:"
+
+PARA CASA:
+
+    Definir um cookie "count=1" na primeira resposta para um cliente desconhecido
+        Cada vez que o servidor receber uma requisição com o cookie "count", incrementar seu valor e re-enviá-lo para o cliente. E assim, por diante!
+
+
+Vimos como podemos tornar segura a nossa comunicação em HTTP, usando o HTTPS. 
+
+Vimos que a porta padrão do esquema HTTP é 80, mas do esquema HTTPS é 443.
+
+Testamos como garantir que o site seja acessado de forma segura sempre: USANDO REDIRECTS 30*.
+
+Porém ainda será possível interceptar a conexão por desvio de IP, ManInTheMiddle, DNS e etc!
+
+Para isto usamos as Autoridades de Certificação, que garantem a identidade do servidor com o qual um cliente está se conectando.
+
+Uma pena que certificado assinado seja tão CARO!!!! Mas deve ficar mais barato, graças à concorrência :) Você já registrou seu domínio na WEB? Daqui há alguns anos eles ficarão mais escassos!
+
+A aula de hoje foi introdutório, fica a dica de leitura da RFC 4346 (https://tools.ietf.org/html/rfc4346). Esta leitura é importante para um Bacharel em Ciência da Computação entender os mecanismos por detrás desta segurança.
+
+PARA CASA:
+
+    Implementar seu HTTPServer com todas as funcionalidades indicadas nas seções PARA CASA até aqui, ou seja, FÉRIAS!
+
+
+ 	
+
+Pessoal, esta é a autoridade que uso no meu site para gerar Certificados SSL Open:
+https://letsencrypt.org/
+
+Até agora, desenvolvemos um servidor HTTP de recursos já prontos disponíveis no sistema de arquivos do servidor.
+
+Na aula de hoje, vimos como tornar o nosso servidor um pouco mais dinâmico. Assim, os clientes podem solicitar páginas (recursos) que são, de certa forma, completados pelo servidor.
+
+Vimos sobre o CGI (Common Gateway Interface) que permite executar programas no servidor. O resultado do programa (System.out) será redirecionado pro cliente e deverá ser um conteúdo HTML ou um Mime-Type compatível com o agente.
+
+https://en.wikipedia.org/wiki/Common_Gateway_Interface
+
+Vimos sobre o PHP (https://www.w3schools.com/php/default.asp) que é uma linguagem de programação interpretada muito utilizada na composição de páginas dinâmicas.
+
+PARA CASA:
+
+    Implementar no seu servidor a capacidade de responder requisições a recursos com extensões ".dyn". Estes recursos são pseudo-html que possuem dentro de si partes delimitadas pelos tokens:
+        <% ............ %>
+        Entre os tokens, pode ter as instruções de nossa pseudo-linguagem-script
+            date("dd/MM/yyyy");
+            getParam("paramName"); // queryParams da URL
+            getHeaderField("fieldName"); //se não existir, retorna null
