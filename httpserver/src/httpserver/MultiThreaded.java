@@ -30,11 +30,14 @@ public class MultiThreaded {
             this.serverSocket = new ServerSocket(port);
             System.out.println("Starting the socket server at port:" + port);
             Socket client = null;
+            int gridPortNumber = 9080;
+            GridServer gridServer = new GridServer(gridPortNumber);
+            gridServer.initServer();
             while (true) {
                 System.out.println("Esperando conexões...");
                 client = serverSocket.accept();
                 System.out.println("O cliente: "+ client.getInetAddress().getCanonicalHostName()+" conectou");
-                Thread thread = new Thread(new Worker(client));
+                Thread thread = new Thread(new Worker(client,gridServer));
                 thread.start();
             }
 	}

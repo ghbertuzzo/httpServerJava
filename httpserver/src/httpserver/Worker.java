@@ -29,11 +29,13 @@ public class Worker implements Runnable {
 	private Socket client;
         private String resourcePath;
         private Map<String,String> map;
+        public GridServer gridServer;
         public Response resp;
         //httpMethod (ENUM), resourcePath (STRING), requestHeaderMap (MAP<STRING, STRING))
 
-	public Worker(Socket client) {
-		this.client = client;
+	public Worker(Socket client,GridServer grid) {
+            this.client = client;
+            this.gridServer = grid;
 	}
 
 	@Override
@@ -60,9 +62,9 @@ public class Worker implements Runnable {
                 }
                 String url = requestHeader.split("\n")[0].split(" ")[1];
                 if (requestHeader.split("\n")[0].contains(Metodos.GET.name())) {
-                    resp.constructResponseHeader(200,url,client);                    
+                    resp.constructResponseHeader(200,url,client,gridServer,requestHeader);                    
                 } else {
-                    resp.constructResponseHeader(404,url,client);                    
+                    resp.constructResponseHeader(404,url,client,gridServer,requestHeader);                    
                 }
                 request.close();
                 

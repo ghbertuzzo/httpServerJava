@@ -1,14 +1,15 @@
 package httpserver;
 
 import java.io.IOException;
+import java.net.SocketException;
 
 class mainServer {
 
-	public static void main(String[] args) throws InterruptedException {
+	public static void main(String[] args) throws InterruptedException, SocketException, IOException {
 		//int portNumber = Integer.parseInt(args[0]);
-		int portNumber = 2080;
+		int httpPortNumber = 2080;                
 		try {
-                    MultiThreaded socketServer = new MultiThreaded(portNumber);
+                    MultiThreaded socketServer = new MultiThreaded(httpPortNumber);
                     socketServer.start();
 		} catch (IOException e) {
 			e.printStackTrace();

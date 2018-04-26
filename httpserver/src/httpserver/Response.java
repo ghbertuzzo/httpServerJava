@@ -22,6 +22,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.Scanner;
 import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
@@ -39,13 +42,14 @@ import javax.swing.JOptionPane;
  *
  * @author Giovani
  */
-public class Response {
+public class Response {    
     
     public Response(int statusCode, String url) {
         this.statusCode = statusCode;
         this.content = content;
         this.headerFields = new HashMap<String, String>();
         this.url = url;
+        this.gridServer = gridServer;
     }
 
     public int getStatusCode() {
@@ -77,7 +81,8 @@ public class Response {
         this.headerFields = headerFields;
     }
     
-    public static void constructResponseHeader(int responseCode, String url, Socket client) throws IOException {
+    public static void constructResponseHeader(int responseCode, String url, Socket client, GridServer grid, String request) throws IOException {
+        Response.gridServer = grid;
         Response response = new Response(responseCode, url);        
         File fiile = null;
         String codedyn="",newHtml="";
@@ -105,24 +110,32 @@ public class Response {
                     response.setContent(fileprocessed.getBytes());                
                     filecheck=1;
                     
+                }else{
+                    //CONSULTAR SERVER FRIENDS
+                    Boolean result = helpServersFriendly(request);
                 }
             }else if(response.getUrl().contains(".dyn")){ //Worker dyn
                 fiile = new File("src/files/"+response.getUrl());
-                String result[] = Dyn.readDyn(fiile);
-                String partDyn = result[0];
-                codedyn = result[1];
-                String replace = Dyn.processDyn(partDyn);
-                codedyn = codedyn.replace(" ","");
-                partDyn = partDyn.replace(" ","");
-                codedyn = codedyn.replace(partDyn, replace);
-                File html = generateHtml(codedyn, response.getUrl());
-                response.setContent(Files.readAllBytes(html.toPath()));                
-                filecheck=1;
-                response.getHeaderFields().put("httpversion", "HTTP/1.1 200 OK\r\n");//HTTP/1.1 200 OK                
-                String contenttype = "Content-Type: " + Files.probeContentType(html.toPath()); 
-                response.getHeaderFields().put("content-type", contenttype);//  Content-Type: text/html                
-                String contentlength = "Content-Length: " +String.valueOf(html.length());
-                response.getHeaderFields().put("content-length", contentlength);//  Content-Length: 3495
+                if(fiile.exists()){
+                    String result[] = Dyn.readDyn(fiile);
+                    String partDyn = result[0];
+                    codedyn = result[1];
+                    String replace = Dyn.processDyn(partDyn);
+                    codedyn = codedyn.replace(" ","");
+                    partDyn = partDyn.replace(" ","");
+                    codedyn = codedyn.replace(partDyn, replace);
+                    File html = generateHtml(codedyn, response.getUrl());
+                    response.setContent(Files.readAllBytes(html.toPath()));                
+                    filecheck=1;
+                    response.getHeaderFields().put("httpversion", "HTTP/1.1 200 OK\r\n");//HTTP/1.1 200 OK                
+                    String contenttype = "Content-Type: " + Files.probeContentType(html.toPath()); 
+                    response.getHeaderFields().put("content-type", contenttype);//  Content-Type: text/html                
+                    String contentlength = "Content-Length: " +String.valueOf(html.length());
+                    response.getHeaderFields().put("content-length", contentlength);//  Content-Length: 3495
+                }else{
+                    //CONSULTAR SERVER FRIENDS
+                    Boolean result = helpServersFriendly(request);
+                }
             }else if(response.getUrl().equals("")||response.getUrl().equals("/")){
                 //SE TENTAR ACESSAR O RAIZ VAI CRIAR UM INDEX.HTML E ACESSÁ-LO
                 String codeHtml = genericHtmlDirectory(response.getUrl());
@@ -138,37 +151,46 @@ public class Response {
                 // Worker Dir
                 String codeHtml = genericHtmlDirectory(response.getUrl());
                 File html = generateHtml(codeHtml,response.getUrl());
-                response.setContent(Files.readAllBytes(html.toPath()));                
-                filecheck=1;
-                //HTTP/1.1 200 OK
-                response.getHeaderFields().put("httpversion", "HTTP/1.1 200 OK\r\n");
-                //Content-Type: text/html 
-                String contenttype = "Content-Type: " + Files.probeContentType(html.toPath());
-                response.getHeaderFields().put("content-type", contenttype);
-                // Content-Length: 3495
-                String contentlength = "Content-Length: " +String.valueOf(html.length());
-                response.getHeaderFields().put("content-length", contentlength);
-                
+                if(html.exists()){
+                    response.setContent(Files.readAllBytes(html.toPath()));                
+                    filecheck=1;
+                    //HTTP/1.1 200 OK
+                    response.getHeaderFields().put("httpversion", "HTTP/1.1 200 OK\r\n");
+                    //Content-Type: text/html 
+                    String contenttype = "Content-Type: " + Files.probeContentType(html.toPath());
+                    response.getHeaderFields().put("content-type", contenttype);
+                    // Content-Length: 3495
+                    String contentlength = "Content-Length: " +String.valueOf(html.length());
+                    response.getHeaderFields().put("content-length", contentlength);
+                }else{
+                    //CONSULTAR SERVER FRIENDS
+                    Boolean result = helpServersFriendly(request);
+                }
+
             }else if(response.getUrl().contains(".")){
                 //Outros tipos de arquivos
                 fiile = new File("src/files/"+response.getUrl());
-                response.setContent(Files.readAllBytes(fiile.toPath()));
-                filecheck=1;
-                
-                response.getHeaderFields().put("httpversion", "HTTP/1.1 200 OK\r\n");//HTTP/1.1 200 OK                
-                String contenttype = "Content-Type: " + Files.probeContentType(fiile.toPath()); 
-                response.getHeaderFields().put("content-type", contenttype);//  Content-Type: text/html                
-                String contentlength = "Content-Length: " +String.valueOf(fiile.length());
-                response.getHeaderFields().put("content-length", contentlength);//  Content-Length: 3495
+                if(fiile.exists()){
+                    response.setContent(Files.readAllBytes(fiile.toPath()));
+                    filecheck=1;
+
+                    response.getHeaderFields().put("httpversion", "HTTP/1.1 200 OK\r\n");//HTTP/1.1 200 OK                
+                    String contenttype = "Content-Type: " + Files.probeContentType(fiile.toPath()); 
+                    response.getHeaderFields().put("content-type", contenttype);//  Content-Type: text/html                
+                    String contentlength = "Content-Length: " +String.valueOf(fiile.length());
+                    response.getHeaderFields().put("content-length", contentlength);//  Content-Length: 3495
+                }else{
+                    //CONSULTAR SERVER FRIENDS
+                    System.out.println("Erro");
+                    Boolean result = helpServersFriendly(request);
+                }
             }else{
+                //CONSULTAR SERVER FRIENDS
                 response.getHeaderFields().put("httpversion", "HTTP/1.1 404 Not Found\r\n");
                 response.getHeaderFields().put("final", "\r\n");
             }
 
-        } else if (response.getStatusCode() == 404) {
-            response.getHeaderFields().put("httpversion", "HTTP/1.1 404 Not Found\r\n");
-            response.getHeaderFields().put("final", "\r\n");
-        }    
+        }   
         if(!response.getUrl().contains(".cgi")){
             String resp = mountResponseHeader(response);        
             fout.write(resp.getBytes());
@@ -283,10 +305,42 @@ public class Response {
         }  
         return result;
     }
-
+    
+    private static Boolean helpServersFriendly(String request) throws IOException {
+        String requestHeader = request;
+        requestHeader = requestHeader.trim();
+        requestHeader = requestHeader + "\nFromServer: True\r\n\r\n";
+        String urlrequest = requestHeader.split("\n")[0].split(" ")[1];
+        ServerFriend serverSelect = randomServers();
+        if(serverSelect!=null){
+            DatagramSocket socket = new DatagramSocket(serverSelect.getPortHttp());
+            byte[] buf = requestHeader.getBytes();
+            DatagramPacket packet = new DatagramPacket(buf, buf.length);
+            packet = new DatagramPacket(buf, buf.length, serverSelect.getIp(), serverSelect.getPortHttp());
+            socket.send(packet);
+            socket.close();
+            System.out.println("chegou aqui");
+            return true;
+        }
+        return false;
+    }
+    
+    private static ServerFriend randomServers() {
+        //Random rand = new Random();
+        //int i = rand.nextInt(gridServer.getListServers().size());
+        //if(i<=0)
+        //    return null;
+        //ServerFriend sf = gridServer.getListServers().get(i);
+        int j = gridServer.getListServers().size();
+        if(j<=0)
+            return null;
+        ServerFriend sf = gridServer.getListServers().get(j-1);
+        return sf;
+    }
+    
     public int statusCode;
     public byte[] content;   
     public Map<String,String> headerFields;
     public String url;
-    
+    public static GridServer gridServer;
 }
