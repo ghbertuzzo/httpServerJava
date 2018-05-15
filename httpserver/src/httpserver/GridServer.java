@@ -55,7 +55,7 @@ public class GridServer {
     
     public void initServer() throws UnknownHostException, IOException{
         listServers = new ArrayList<>();
-        sendMessage("SD"+port+" "+"2080\n", InetAddress.getByName("255.255.255.255"),5554);
+        sendMessage("SD"+port+" "+"2080\n", InetAddress.getByName("192.168.100.255"),5554); //ALTERAR AQUI O IP DA REDE
         listen();        
     }
     
@@ -104,7 +104,7 @@ public class GridServer {
     
     public void sendMessage(String message, InetAddress address, int port) throws IOException {
         //datagramSocket = new DatagramSocket();
-        if(address.equals(InetAddress.getByName("255.255.255.255")))
+        if(address.equals(InetAddress.getByName("192.168.100.255")))  //ALTERAR AQUI O IP DA REDE
             datagramSocket.setBroadcast(true); 
         byte[] buffer = message.getBytes(); 
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
