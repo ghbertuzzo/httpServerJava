@@ -4,8 +4,12 @@
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
             <file>file:/home/bertuzzo/NetBeansProjects/httpserver/src/files/folder/testRecursao/emails.txt</file>
+            <file>file:/home/bertuzzo/NetBeansProjects/httpserver/src/files/file.dyn</file>
             <file>file:/home/bertuzzo/NetBeansProjects/httpserver/src/generatedFiles/indexPrevExe.html</file>
+            <file>file:/home/bertuzzo/NetBeansProjects/httpserver/src/httpserver/GridServer.java</file>
             <file>file:/home/bertuzzo/NetBeansProjects/httpserver/src/httpserver/MultiThreaded.java</file>
+            <file>file:/home/bertuzzo/NetBeansProjects/httpserver/src/httpserver/Dyn.java</file>
+            <file>file:/home/bertuzzo/NetBeansProjects/httpserver/src/httpserver/ServerFriend.java</file>
             <file>file:/home/bertuzzo/NetBeansProjects/httpserver/src/httpserver/Response.java</file>
             <file>file:/home/bertuzzo/NetBeansProjects/httpserver/src/httpserver/Worker.java</file>
             <file>file:/home/bertuzzo/NetBeansProjects/httpserver/src/httpserver/mainServer.java</file>

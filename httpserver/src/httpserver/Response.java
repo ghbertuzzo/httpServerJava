@@ -43,6 +43,32 @@ import javax.swing.JOptionPane;
  * @author Giovani
  */
 public class Response {    
+
+    private static Response notFound(Response response) throws FileNotFoundException, IOException {
+        File html = null;        
+        Response retorno = response;
+        String newHtml = "";
+        BufferedReader br = new BufferedReader(new FileReader("/home/bertuzzo/NetBeansProjects/httpserver/src/generatedFiles/notFound.html"));                
+        while(br.ready()){
+           String linha = br.readLine();
+           newHtml += linha;                  
+        }
+        br.close();
+        html = new File("/home/bertuzzo/NetBeansProjects/httpserver/src/generatedFiles/notFound404.html");
+        BufferedWriter writer = new BufferedWriter(new FileWriter(html));
+        writer.write(newHtml);
+        writer.flush();
+        writer.close();
+        retorno.setContent(Files.readAllBytes(html.toPath()));         
+        //HTTP/1.1 404 
+        retorno.setStatusCode(404);
+        retorno.getHeaderFields().put("httpversion", "HTTP/1.1 404 Not Found\r\n");
+        String contenttype = "Content-Type: " + Files.probeContentType(html.toPath());
+        retorno.getHeaderFields().put("content-type", contenttype);
+        String contentlength = "Content-Length: " +String.valueOf(html.length());
+        retorno.getHeaderFields().put("content-length", contentlength);          
+        return retorno;
+    }
     
     public Response(int statusCode, String url) {
         this.statusCode = statusCode;
@@ -89,8 +115,42 @@ public class Response {
         OutputStream fout = new DataOutputStream(client.getOutputStream());
         int filecheck = 0;
         if (response.getStatusCode() == 200) {
-            // /mult.cgi?m=4&n=9
-            if(response.getUrl().contains(".cgi")){
+            if(response.getUrl().equals("/virtual/telemetria/status.json")){
+                byte[] conteudoJson = new String("{\"numReq\":"+countReq+", \"codeStatus\":"+response.getStatusCode()+"}").getBytes();
+                
+                //byte[] conteudoJson = new String("{ \"records\":[{\"Name\":\"Alfreds Futterkiste\",\"City\":\"Berlin\",\"Country\":\"Germany\"}, \n" +
+                //"{\"Name\":\"Ana Trujillo Emparedados y helados\",\"City\":\"México D.F.\",\"Country\":\"Mexico\"}]}").getBytes();
+                
+                response.setContent(conteudoJson);                
+                filecheck=1;
+                response.getHeaderFields().put("httpversion", "HTTP/1.1 200 OK\r\n");
+                String contenttype = "Content-Type: " + "application/json";
+                response.getHeaderFields().put("content-type", contenttype);
+                String contentlength = "Content-Length: " + conteudoJson.length;
+                response.getHeaderFields().put("content-length", contentlength);
+                
+                
+            }else if(response.getUrl().contains("telemetria")){
+                String codeHtml = generateTelemetria(response.getUrl());
+                File html = null;
+                
+                if(codeHtml!=null){
+                    html = generateHtml(codeHtml,response.getUrl());
+                }               
+                if(html.exists()){
+                    response.setContent(Files.readAllBytes(html.toPath()));                
+                    filecheck=1;
+                    response.getHeaderFields().put("httpversion", "HTTP/1.1 200 OK\r\n");
+                    String contenttype = "Content-Type: " + Files.probeContentType(html.toPath());
+                    response.getHeaderFields().put("content-type", contenttype);
+                    String contentlength = "Content-Length: " +String.valueOf(html.length());
+                    response.getHeaderFields().put("content-length", contentlength);
+                }else{
+                    response = notFound(response);
+                    filecheck=1;
+                }
+            }else if(response.getUrl().contains(".cgi")){
+                countReq++;
                 String param="";
                 if(response.getUrl().contains("?")){
                     param = response.getUrl();
@@ -101,7 +161,6 @@ public class Response {
                 }
                 String fileprocessed="";
                 newHtml="";
-                //WORKER Dynamic Resource CGI
                 fiile = new File("src/files/"+response.getUrl());
                 if(fiile.exists()){
                     if(fiile.canExecute()){
@@ -115,6 +174,7 @@ public class Response {
                     Boolean result = helpServersFriendly(request);
                 }
             }else if(response.getUrl().contains(".dyn")){ //Worker dyn
+                countReq++;
                 fiile = new File("src/files/"+response.getUrl());
                 if(fiile.exists()){
                     String result[] = Dyn.readDyn(fiile);
@@ -136,39 +196,10 @@ public class Response {
                     //CONSULTAR SERVER FRIENDS
                     Boolean result = helpServersFriendly(request);
                 }
-            }else if(response.getUrl().equals("")||response.getUrl().equals("/")){
-                //SE TENTAR ACESSAR O RAIZ VAI CRIAR UM INDEX.HTML E ACESSÁ-LO
-                String codeHtml = genericHtmlDirectory(response.getUrl());
-                File html = generateHtml(codeHtml,response.getUrl());
-                response.setContent(Files.readAllBytes(html.toPath()));                
-                filecheck=1;
-                response.getHeaderFields().put("httpversion", "HTTP/1.1 200 OK\r\n");//HTTP/1.1 200 OK                
-                String contenttype = "Content-Type: " + Files.probeContentType(html.toPath()); 
-                response.getHeaderFields().put("content-type", contenttype);//  Content-Type: text/html                
-                String contentlength = "Content-Length: " +String.valueOf(html.length());
-                response.getHeaderFields().put("content-length", contentlength);//  Content-Length: 3495
-            }else if(!response.getUrl().equals("") && !response.getUrl().contains(".")){
-                // Worker Dir
-                String codeHtml = genericHtmlDirectory(response.getUrl());
-                File html = generateHtml(codeHtml,response.getUrl());
-                if(html.exists()){
-                    response.setContent(Files.readAllBytes(html.toPath()));                
-                    filecheck=1;
-                    //HTTP/1.1 200 OK
-                    response.getHeaderFields().put("httpversion", "HTTP/1.1 200 OK\r\n");
-                    //Content-Type: text/html 
-                    String contenttype = "Content-Type: " + Files.probeContentType(html.toPath());
-                    response.getHeaderFields().put("content-type", contenttype);
-                    // Content-Length: 3495
-                    String contentlength = "Content-Length: " +String.valueOf(html.length());
-                    response.getHeaderFields().put("content-length", contentlength);
-                }else{
-                    //CONSULTAR SERVER FRIENDS
-                    Boolean result = helpServersFriendly(request);
-                }
-
             }else if(response.getUrl().contains(".")){
+                countReq++;
                 //Outros tipos de arquivos
+                
                 fiile = new File("src/files/"+response.getUrl());
                 if(fiile.exists()){
                     response.setContent(Files.readAllBytes(fiile.toPath()));
@@ -181,13 +212,52 @@ public class Response {
                     response.getHeaderFields().put("content-length", contentlength);//  Content-Length: 3495
                 }else{
                     //CONSULTAR SERVER FRIENDS
-                    System.out.println("Erro");
-                    Boolean result = helpServersFriendly(request);
+                    response = notFound(response);
+                    filecheck=1;
                 }
+            }else if(response.getUrl().equals("")||response.getUrl().equals("/")){
+                countReq++;
+                //SE TENTAR ACESSAR O RAIZ VAI CRIAR UM INDEX.HTML E ACESSÁ-LO
+                String codeHtml = genericHtmlDirectory(response.getUrl());
+                File html = generateHtml(codeHtml,response.getUrl());
+                response.setContent(Files.readAllBytes(html.toPath()));                
+                filecheck=1;
+                response.getHeaderFields().put("httpversion", "HTTP/1.1 200 OK\r\n");//HTTP/1.1 200 OK                
+                String contenttype = "Content-Type: " + Files.probeContentType(html.toPath()); 
+                response.getHeaderFields().put("content-type", contenttype);//  Content-Type: text/html                
+                String contentlength = "Content-Length: " +String.valueOf(html.length());
+                response.getHeaderFields().put("content-length", contentlength);//  Content-Length: 3495
+            }else if(!response.getUrl().contains(".")){
+                countReq++;
+                // Worker Dir                
+                String codeHtml = genericHtmlDirectory(response.getUrl());
+                File html = null;                
+                if(codeHtml!=null){
+                    html = generateHtml(codeHtml,response.getUrl());
+                    if(html.exists()){
+                        System.out.println("Erro");
+                        response.setContent(Files.readAllBytes(html.toPath()));                
+                        filecheck=1;
+                        response.getHeaderFields().put("httpversion", "HTTP/1.1 200 OK\r\n");
+                        String contenttype = "Content-Type: " + Files.probeContentType(html.toPath());
+                        response.getHeaderFields().put("content-type", contenttype);
+                        String contentlength = "Content-Length: " +String.valueOf(html.length());
+                        response.getHeaderFields().put("content-length", contentlength);
+                    }else{
+                        //CONSULTAR SERVER FRIENDS
+                        response = notFound(response);
+                        filecheck=1;
+                    }
+                }else{ 
+                    response = notFound(response);
+                    filecheck=1;
+                }      
+                
+
             }else{
                 //CONSULTAR SERVER FRIENDS
-                response.getHeaderFields().put("httpversion", "HTTP/1.1 404 Not Found\r\n");
-                response.getHeaderFields().put("final", "\r\n");
+                response = notFound(response);
+                filecheck=1;
             }
 
         }   
@@ -201,6 +271,40 @@ public class Response {
             fout.flush();
         }
         fout.close();
+    }
+    
+    private static String generateTelemetria(String url) throws FileNotFoundException, IOException {
+        String newHtml = "";
+        File file = null;
+        if(url.contains("telemetria")){
+            file = new File("src/files/"+url);
+        }
+        if(file.exists()){
+            BufferedReader br = new BufferedReader(new FileReader("/home/bertuzzo/NetBeansProjects/httpserver/src/generatedFiles/telemetria.html"));                
+            while(br.ready()){
+               String linha = br.readLine();
+               if(linha.contains("mento: ")){
+                   String comp = "mento: ";
+                   int indice = linha.indexOf(comp);
+                   if(countReq<10)
+                       linha = linha.substring (0, indice+7) + countReq + linha.substring (indice+8);        
+                   else if(countReq<100)
+                       linha = linha.substring (0, indice+7) + countReq + linha.substring (indice+9);    
+                   else
+                       linha = linha.substring (0, indice+7) + countReq + linha.substring (indice+10);    
+                   countReq++;
+                   //String addtohtml = "<h4>Número de Requisições até o momento: "+ countReq +" </h4>";
+                   newHtml += linha;
+               }else{
+                   newHtml += linha;
+               }                         
+            }
+
+            br.close();
+        }else{
+            return null;
+        }
+        return newHtml;
     }
     
     public static String listDir(File directory){
@@ -229,16 +333,21 @@ public class Response {
         }else{
             directory = new File("src/files/"+url);
         }
-        BufferedReader br = new BufferedReader(new FileReader("/home/bertuzzo/NetBeansProjects/httpserver/src/generatedFiles/indexPrev.html"));                
-        while(br.ready()){
-           String linha = br.readLine();
-           newHtml += linha;
-           if(linha.contains("</th><th>Size</th></tr>")){
-               String addtohtml = listDir2(directory);
-               newHtml += addtohtml;
-           }                   
+        if(directory.exists()){
+            BufferedReader br = new BufferedReader(new FileReader("/home/bertuzzo/NetBeansProjects/httpserver/src/generatedFiles/indexPrev.html"));                
+            while(br.ready()){
+               String linha = br.readLine();
+               newHtml += linha;
+               if(linha.contains("</th><th>Size</th></tr>")){
+                   String addtohtml = listDir2(directory);
+                   newHtml += addtohtml;
+               }                   
+            }
+
+            br.close();
+        }else{
+            return null;
         }
-        br.close();
         return newHtml;
     }
     private static File generateHtml(String codeHtml, String url) throws IOException {
@@ -250,6 +359,8 @@ public class Response {
             String newarq = url.substring(a);
             newarq = url.replace(".dyn", "");
             html = new File("src/generatedFiles"+newarq+".html");
+        }else if(url.contains("telemetria")){
+            html = new File("src/generatedFiles"+url+".html");
         }else{
             int a = url.lastIndexOf("/");
             String newarq = url.substring(a);
@@ -319,7 +430,6 @@ public class Response {
             packet = new DatagramPacket(buf, buf.length, serverSelect.getIp(), serverSelect.getPortHttp());
             socket.send(packet);
             socket.close();
-            System.out.println("chegou aqui");
             return true;
         }
         return false;
@@ -343,4 +453,5 @@ public class Response {
     public Map<String,String> headerFields;
     public String url;
     public static GridServer gridServer;
+    public static int countReq;
 }
